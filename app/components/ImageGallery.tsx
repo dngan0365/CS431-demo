@@ -15,34 +15,29 @@ export default function ImageGallery({
   finalImage, 
   simpleImage 
 }: ImageGalleryProps) {
-  const displayImage = finalImage || simpleImage;
   const showDenoiseProgress = denoiseImages.length > 0;
+  const hasAnyImage = finalImage || simpleImage;
 
   return (
     <div className="space-y-6">
-      {/* Main Generated Image - Hero Section */}
-      {displayImage && (
+      {/* Simple Generated Image */}
+      {simpleImage && (
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+          <div className="bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">
-                    {finalImage ? 'Your Generated Image' : 'Quick Generation'}
-                  </h2>
-                  <p className="text-sm text-blue-100">
-                    {finalImage ? 'High quality result 🎨' : 'Fast generation ⚡'}
-                  </p>
+                  <h2 className="text-xl font-bold text-white">Quick Generation</h2>
+                  <p className="text-sm text-cyan-100">Fast generation ⚡</p>
                 </div>
               </div>
               <a
-                href={displayImage}
-                // eslint-disable-next-line react-hooks/purity
-                download={`generated-image-${Date.now()}.png`}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-md"
+                href={simpleImage}
+                download={`simple-image-${Date.now()}.png`}
+                className="bg-white text-cyan-600 hover:bg-cyan-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-md"
               >
                 <Download className="w-4 h-4" />
                 Download
@@ -54,8 +49,50 @@ export default function ImageGallery({
             <div className="max-w-2xl mx-auto">
               <div className="relative overflow-hidden rounded-xl shadow-2xl border border-gray-200">
                 <Image
-                  src={displayImage}
-                  alt="Generated Image"
+                  src={simpleImage}
+                  alt="Simple Generated Image"
+                  width={800}
+                  height={800}
+                  className="w-full h-auto"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Generated Image */}
+      {finalImage && (
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <ImageIcon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Final Generated Image</h2>
+                  <p className="text-sm text-purple-100">High quality result 🎨</p>
+                </div>
+              </div>
+              <a
+                href={finalImage}
+                download={`final-image-${Date.now()}.png`}
+                className="bg-white text-purple-600 hover:bg-purple-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-md"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            </div>
+          </div>
+          
+          <div className="p-8">
+            <div className="max-w-2xl mx-auto">
+              <div className="relative overflow-hidden rounded-xl shadow-2xl border border-gray-200">
+                <Image
+                  src={finalImage}
+                  alt="Final Generated Image"
                   width={800}
                   height={800}
                   className="w-full h-auto"
@@ -117,7 +154,7 @@ export default function ImageGallery({
       )}
 
       {/* Empty State */}
-      {!displayImage && !showDenoiseProgress && (
+      {!hasAnyImage && !showDenoiseProgress && (
         <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
           <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
             <ImageIcon className="w-8 h-8 text-gray-400" />
