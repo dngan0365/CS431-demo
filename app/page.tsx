@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
@@ -7,7 +8,7 @@ import RefinedPrompts from './components/RefinedPrompts';
 import ProgressIndicator from './components/ProgressIndicator';
 import ImageGallery from './components/ImageGallery';
 import { refinePromptWithGemini } from './lib/gemini';
-import { generateImage } from './lib/backend';
+import { generateImage, generateSimpleImage } from './lib/backend';
 import { RefinedPromptData, DenoiseImage } from './types';
 
 export default function Home() {
@@ -21,6 +22,40 @@ export default function Home() {
   const [finalImage, setFinalImage] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
+  const [generatingSimple, setGeneratingSimple] = useState(false);
+  const [simpleImage, setSimpleImage] = useState<string | null>(null);
+
+  const handleGenerateSimple = async () => {
+    if (!prompt.trim()) {
+      setError('Please enter a prompt');
+      return;
+    }
+
+    setGeneratingSimple(true);
+    setError('');
+    setSimpleImage(null);
+    setProgress('Generating simple image...');
+
+    try {
+      const { generateSimpleImage } = await import('./lib/backend');
+      
+      for await (const event of generateSimpleImage(backendUrl, prompt)) {
+        if (event.type === 'progress') {
+          setProgress(event.message || '');
+        } else if (event.type === 'final_image') {
+          setSimpleImage(`${event.image}`);
+          setProgress('Simple generation complete! 🎉');
+        } else if (event.type === 'error') {
+          setError(event.message || 'Unknown error');
+        }
+      }
+    } catch (err: any) {
+      setError(`Simple generation failed: ${err.message}`);
+      console.error('Simple generation error:', err);
+    } finally {
+      setGeneratingSimple(false);
+    }
+  };
 
   const handleRefine = async () => {
     if (!prompt.trim()) {
@@ -61,15 +96,10 @@ export default function Home() {
     setProgress('Connecting to backend...');
 
     try {
-      // `Array.prototype.at(-1)` may not be available depending on the TS/target
-      // and can return undefined for empty arrays. Compute the last prompt
-      // in a backwards-compatible, type-safe way and guard against undefined.
+      // Get the last prompt safely
       const lastPrompt = refinedData.prompts_list && refinedData.prompts_list.length > 0
         ? refinedData.prompts_list[refinedData.prompts_list.length - 1]
-        : // fallback to a top-level prompt if available on refinedData
-          // (adjust this fallback to whatever shape `RefinedPromptData` has)
-          // Using an empty string is safer than passing `undefined` to the backend
-          (refinedData as any).prompt || '';
+        : (refinedData as any).prompt || '';
 
       for await (const event of generateImage(backendUrl, lastPrompt, refinedData)) {
         if (event.type === 'progress') {
@@ -77,22 +107,70 @@ export default function Home() {
         } else if (event.type === 'denoise_image') {
           setDenoiseImages(prev => [...prev, {
             step: event.step!,
-            image: `data:image/png;base64,${event.image}`
+            image: `${event.image}`
           }]);
           setProgress(`Denoising step ${event.step}...`);
         } else if (event.type === 'final_image') {
-          setFinalImage(`data:image/png;base64,${event.image}`);
+          setFinalImage(`${event.image}`);
           setProgress('Generation complete! 🎉');
         } else if (event.type === 'error') {
           setError(event.message || 'Unknown error');
         }
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(`Generation failed: ${err.message}`);
       console.error('Generation error:', err);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleUpdatePrompt = (index: number, newValue: string) => {
+    if (!refinedData) return;
+
+    setRefinedData(prev => ({
+      ...prev!,
+      prompts_list: prev!.prompts_list.map((p, i) =>
+        i === index ? newValue : p
+      )
+    }));
+  };
+
+  const handleUpdateStep = (index: number, newStep: number) => {
+    if (!refinedData) return;
+
+    // Clone existing steps
+    const updated = [...refinedData.switch_prompts_steps];
+    updated[index] = newStep;
+
+    // Enforce sorting + minimum step
+    const cleaned = updated
+      .map(n => Math.max(1, Math.floor(n)))
+      .sort((a, b) => a - b);
+
+    setRefinedData(prev => ({
+      ...prev!,
+      switch_prompts_steps: cleaned
+    }));
+  };
+
+  const handleAddPrompt = (newText: string, newStep: number) => {
+    if (!refinedData) return;
+
+    // Insert new prompt before the last one
+    const newPromptsList = [...refinedData.prompts_list];
+    const lastPrompt = newPromptsList.pop(); // Remove last prompt
+    newPromptsList.push(newText); // Add new prompt
+    if (lastPrompt !== undefined) {
+      newPromptsList.push(lastPrompt); // Add back the last prompt
+    }
+
+    setRefinedData(prev => ({
+      ...prev!,
+      prompts_list: newPromptsList,
+      switch_prompts_steps: [...prev!.switch_prompts_steps, newStep]
+    }));
   };
 
   return (
@@ -123,6 +201,8 @@ export default function Home() {
               onRefine={handleRefine}
               refining={refining}
               disabled={!prompt.trim()}
+              onGenerateSimple={handleGenerateSimple}
+              generatingSimple={generatingSimple}
             />
           </div>
 
@@ -146,9 +226,12 @@ export default function Home() {
               explanation={explanation}
               onGenerate={handleGenerate}
               generating={generating}
+              onUpdatePrompt={handleUpdatePrompt}
+              onUpdateStep={handleUpdateStep}
+              onAddPrompt={handleAddPrompt}
             />
           )}
-
+          
           {/* Progress */}
           {progress && generating && (
             <ProgressIndicator message={progress} />
@@ -158,6 +241,7 @@ export default function Home() {
           <ImageGallery
             denoiseImages={denoiseImages}
             finalImage={finalImage}
+            simpleImage={simpleImage}
           />
         </div>
       </div>

@@ -1,12 +1,10 @@
 import {
   GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
   SchemaType, // Import SchemaType
+  // Import the SDK Schema type for proper typing of responseSchema
+  Schema,
 } from '@google/generative-ai';
-
 // Your type definition might still be useful for the function's return signature
-import { GeminiResponse } from '@/app/types';
 
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
@@ -30,7 +28,7 @@ const promptSchema = {
         switch_prompts_steps: {
           type: SchemaType.ARRAY,
           items: {
-            type: SchemaType.NUMBER, // Use SchemaType.NUMBER for z.number()
+            type: SchemaType.NUMBER,
           },
         },
       },
@@ -109,7 +107,7 @@ Output:
   "explanation": "A polar bear is common in snowy scenes, not deserts. Since no suitable object proxy exists, the prompt starts with the desert alone before introducing the unlikely animal.",
   "final_dictionary": {
     "prompts_list": [
-      "A desert",
+      "A white animal in a desert",
       "A polar bear in a desert"
     ],
     "switch_prompts_steps": [2]
@@ -140,7 +138,10 @@ Output:
     // Use generationConfig and responseSchema, as in your example
     generationConfig: {
       responseMimeType: 'application/json',
-      responseSchema: promptSchema, // Pass the native schema object
+      // SDK expects a Schema type; provide the native schema but cast to any
+      // to satisfy TypeScript here. If you prefer stricter typing, import
+      // the SDK's Schema helpers and construct the schema via those APIs.
+      responseSchema: promptSchema as unknown as Schema,
       temperature: 0.1,
     },
   });
@@ -153,7 +154,9 @@ Output:
   
   // Use response.text() and parse it, as shown in your example.
   // The API guarantees this text matches the schema.
-  const jsonText = response.text();
+  // `response.text()` may return a Promise<string> depending on SDK/runtime,
+  // so await it to get the actual text content.
+  const jsonText = await response.text();
   let parsedResult: PromptSchemaType;
 
   if (!jsonText) {
@@ -167,7 +170,7 @@ Output:
   try {
     parsedResult = JSON.parse(jsonText);
   } catch (e) {
-    console.error('Failed to parse JSON response from Gemini:', jsonText);
+    console.error('Failed to parse JSON response from Gemini:', jsonText, e);
     throw new Error('Failed to refine prompt: Invalid JSON response');
   }
 

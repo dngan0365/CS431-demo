@@ -1,4 +1,4 @@
-import { GenerationProgress, RefinedPromptData } from '@/app/types';
+import { GenerationProgress, RefinedPromptData, SimpleGenerationProgress } from '@/app/types';
 
 export async function* generateImage(
   backendUrl: string,
@@ -20,11 +20,6 @@ export async function* generateImage(
   }
 
   console.log('Connected to backend, starting to receive SSE...');
-  console.log('Response object:', response);
-
-  // Get JSON content
-  const data = await response.json();
-  console.log('Response JSON:', data);
 
   const reader = response.body?.getReader();
   if (!reader) throw new Error('No response body');
@@ -41,13 +36,66 @@ export async function* generateImage(
     buffer = lines.pop() || '';
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("data: ")) {
         try {
-          const jsonData: GenerationProgress = JSON.parse(line.slice(6));
+          const jsonData: GenerationProgress = JSON.parse(trimmed.slice(6));
           yield jsonData;
         } catch (e) {
-          console.error('Failed to parse SSE data:', e);
+          console.error("Failed to parse SSE data:", e, trimmed);
         }
+      }
+    }
+  }
+}
+
+
+export async function* generateSimpleImage(
+  backendUrl: string,
+  prompt: string
+): AsyncGenerator<SimpleGenerationProgress> {
+
+  const response = await fetch(`${backendUrl}/generate_simple`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initial_prompt: prompt })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend error: ${response.status}`);
+  }
+
+  console.log("Connected to backend for simple generation...");
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body from backend");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE events end with "\n\n"
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? ""; // giữ lại đoạn incomplete
+
+    for (const event of events) {
+      const line = event.trim();
+      if (!line.startsWith("data:")) continue;
+
+      const jsonStr = line.slice(5).trim(); // remove "data:"
+
+      try {
+        const parsed: SimpleGenerationProgress = JSON.parse(jsonStr);
+        yield parsed;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (e) {
+        console.error("❌ Failed to parse SSE JSON:", jsonStr);
       }
     }
   }

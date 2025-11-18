@@ -12,6 +12,13 @@ export interface GenerationProgress {
   type: 'progress' | 'denoise_image' | 'final_image' | 'error';
   message?: string;
   step?: number;
+  total_steps?: number;
+  image?: string;
+}
+
+export interface SimpleGenerationProgress {
+  type: 'progress' | 'final_image' | 'error';
+  message?: string;
   image?: string;
 }
 

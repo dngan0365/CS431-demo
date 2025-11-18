@@ -1,79 +1,129 @@
 'use client';
 
 import { Download, Image as ImageIcon } from 'lucide-react';
-import { DenoiseImage } from '@/app/types';
+import { DenoiseImage } from '../types';
+import Image from 'next/image';
 
 interface ImageGalleryProps {
-  denoiseImages: DenoiseImage[];
-  finalImage: string | null;
+  denoiseImages?: DenoiseImage[];
+  finalImage?: string | null;
+  simpleImage?: string | null;
 }
 
-export default function ImageGallery({ denoiseImages, finalImage }: ImageGalleryProps) {
+export default function ImageGallery({ 
+  denoiseImages = [], 
+  finalImage, 
+  simpleImage 
+}: ImageGalleryProps) {
+  const displayImage = finalImage || simpleImage;
+  const showDenoiseProgress = denoiseImages.length > 0;
+
   return (
-    <div className="space-y-4">
-      {/* Denoise Images */}
-      {denoiseImages.length > 0 && (
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-              <ImageIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">Denoising Progress</h2>
-              <p className="text-sm text-gray-600">{denoiseImages.length} steps captured</p>
+    <div className="space-y-6">
+      {/* Main Generated Image - Hero Section */}
+      {displayImage && (
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <ImageIcon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    {finalImage ? 'Your Generated Image' : 'Quick Generation'}
+                  </h2>
+                  <p className="text-sm text-blue-100">
+                    {finalImage ? 'High quality result 🎨' : 'Fast generation ⚡'}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={displayImage}
+                // eslint-disable-next-line react-hooks/purity
+                download={`generated-image-${Date.now()}.png`}
+                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-md"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {denoiseImages.map((img, idx) => (
-              <div key={idx} className="relative group">
-                <div className="relative overflow-hidden rounded-xl border-2 border-blue-200 shadow-md group-hover:shadow-xl transition-shadow">
-                  <img
-                    src={img.image}
-                    alt={`Denoise step ${img.step}`}
-                    className="w-full h-auto"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                <div className="absolute bottom-3 left-3 bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-lg shadow-lg">
-                  Step {img.step}
-                </div>
+          <div className="p-8">
+            <div className="max-w-2xl mx-auto">
+              <div className="relative overflow-hidden rounded-xl shadow-2xl border border-gray-200">
+                <Image
+                  src={displayImage}
+                  alt="Generated Image"
+                  width={800}
+                  height={800}
+                  className="w-full h-auto"
+                  priority
+                />
               </div>
-            ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Final Image */}
-      {finalImage && (
-        <div className="card">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg animate-pulse">
-              <ImageIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">Final Generated Image</h2>
-              <p className="text-sm text-gray-600">Your creation is ready! 🎉</p>
+      {/* Generation Progress Timeline */}
+      {showDenoiseProgress && (
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Generation Progress</h2>
+                <p className="text-sm text-orange-100">
+                  {denoiseImages.length} denoising steps
+                </p>
+              </div>
             </div>
           </div>
           
-          <div className="relative group">
-            <div className="relative overflow-hidden rounded-2xl border-4 border-blue-300 shadow-2xl">
-              <img
-                src={finalImage}
-                alt="Generated"
-                className="w-full h-auto"
-              />
+          <div className="p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {denoiseImages.map((img, idx) => (
+                <div key={idx} className="group cursor-pointer">
+                  <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 hover:border-orange-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                    <Image
+                      src={img.image}
+                      alt={`Step ${img.step}`}
+                      width={200}
+                      height={200}
+                      className="w-full h-auto"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-2 left-2 right-2 text-center">
+                        <span className="text-white text-xs font-medium">
+                          Step {img.step}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <span className="text-xs text-gray-600 font-medium">
+                      Step {img.step}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <a
-              href={finalImage}
-              download="generated-image.png"
-              className="absolute top-4 right-4 btn-secondary flex items-center gap-2 shadow-xl hover:scale-105 transform transition-transform"
-            >
-              <Download className="w-4 h-4" />
-              Download
-            </a>
           </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!displayImage && !showDenoiseProgress && (
+        <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
+          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ImageIcon className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No images yet</h3>
+          <p className="text-gray-500">Generate an image to see it here</p>
         </div>
       )}
     </div>

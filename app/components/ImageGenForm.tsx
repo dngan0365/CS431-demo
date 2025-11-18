@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
+import Image from 'next/image';
 
 export default function ImageGenForm() {
   const [prompt, setPrompt] = useState("");
@@ -83,9 +85,12 @@ export default function ImageGenForm() {
           <h2 className="font-semibold mb-2">Denoising Steps</h2>
           <div className="grid grid-cols-2 gap-3">
             {stepImages.map((img, i) => (
-              <img
+              <Image
                 key={i}
                 src={`data:image/png;base64,${img}`}
+                alt={`Denoising step ${i + 1}`}
+                width={300}
+                height={300}
                 className="rounded-lg border"
               />
             ))}
@@ -96,8 +101,11 @@ export default function ImageGenForm() {
       {finalImage && (
         <div className="mt-8">
           <h2 className="font-semibold mb-2">Final Image</h2>
-          <img
+          <Image
             src={`data:image/png;base64,${finalImage}`}
+            alt="Final generated image"
+            width={600}
+            height={600}
             className="rounded-xl shadow-lg w-full"
           />
         </div>
